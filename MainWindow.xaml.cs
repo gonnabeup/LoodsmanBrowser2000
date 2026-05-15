@@ -26,7 +26,7 @@ namespace LoodsmanBrowser2000
         {
             InitializeComponent();
             NPC = npc;
-            MainFrame.Navigate(new DbConnectionPage(this));
+            MainFrame.Navigate(new BrowserPage(npc));
         }
 
     }

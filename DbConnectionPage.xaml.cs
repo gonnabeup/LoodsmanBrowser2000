@@ -30,7 +30,7 @@ namespace LoodsmanBrowser2000
             InitializeComponent();
             _mainWindow = mainWindow;
             _npc = mainWindow.NPC;
-            Loaded += DbConnectionPage_Loaded; // проверяем что страница со всеми элементами загрузилась(нулреференс превеншен)
+            Loaded += DbConnectionPage_Loaded; //проверяем что страница со всеми элементами загрузилась(нулреференс превеншен)
         }
         private void LoadDatabases()
         {
