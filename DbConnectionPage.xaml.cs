@@ -77,7 +77,7 @@ namespace LoodsmanBrowser2000
                     var res = _npc.RunMethod("CurrentBase"); //узнаем к какой базе мы подключены
                     if (dbName == (string)res)
                     {
-                        _mainWindow.MainFrame.Navigate(new BrowserPage(_npc)); //едем дальше
+                        _mainWindow.MainFrame.Navigate(new BrowserPage(_npc, _mainWindow)); //едем дальше
                     }
                 }
                 else //тип аутентификации windows
@@ -86,7 +86,7 @@ namespace LoodsmanBrowser2000
                     var res = _npc.RunMethod("CurrentBase"); //узнаем к какой базе мы подключены
                     if (dbName == (string)res)
                     {
-                        _mainWindow.MainFrame.Navigate(new BrowserPage(_npc)); //едем дальше
+                        _mainWindow.MainFrame.Navigate(new BrowserPage(_npc, _mainWindow)); //едем дальше
                     }
                     else
                     {
