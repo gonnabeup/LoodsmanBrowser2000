@@ -49,6 +49,7 @@ namespace LoodsmanBrowser2000
         {
             public int IdVersion { get; set; }
             public string TypeName { get; set; }
+            public int IdLink { get; set; }
         }
 
         // модель файла
@@ -118,7 +119,10 @@ namespace LoodsmanBrowser2000
             int accessLevel =
                 row["_ACCESSLEVEL"] != DBNull.Value ? Convert.ToInt32(row["_ACCESSLEVEL"]) : 0; // уровень доступа
             string colorName = GetAccessColor(accessLevel);
-
+            int idLink = row.Table.Columns.Contains("_ID_LINK") 
+                && row["_ID_LINK"] != DBNull.Value 
+                ? Convert.ToInt32(row["_ID_LINK"]) 
+                : 0;
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
             // индикатор прав доступа
             if (0 < accessLevel && accessLevel <= 3)
@@ -174,7 +178,7 @@ namespace LoodsmanBrowser2000
             var tvi = new TreeViewItem
             {
                 Header = panel,
-                Tag = new TreeItemData { IdVersion = idVersion, TypeName = type },
+                Tag = new TreeItemData { IdVersion = idVersion, TypeName = type, IdLink = idLink },
             };
             // делаем расширяемым
 
@@ -432,7 +436,7 @@ namespace LoodsmanBrowser2000
         }
 
         // загружаем атрибуты
-        private void LoadAttributes(int idVersion, string typeName)
+        private void LoadAttributes(int idVersion, string typeName, int idLink)
         {
             try
             {
@@ -444,20 +448,45 @@ namespace LoodsmanBrowser2000
                     "GetInfoAboutVersion",
                     new object[] { "", "", "", idVersion, 2 }
                 ); // получаем заполненные аттрибуты выбранного объекта
-
+                var dtLinkAttrs = _npc.GetDataTable(
+                        "GetLinkAttributes",
+                        new object[] { idLink }
+                ); // получаем атрибуты связи
                 if (dtTypeAttrs == null) // проверяем наличие атрибутов у типа
                     return;
 
                 var valueMap = new Dictionary<string, string>(); // словарь для атрибутов со значениями
-
+                // заполненные атрибуты объекта
                 foreach (DataRow row in dtAttrValues.Rows)
                 {
                     string name = row["_NAME"]?.ToString() ?? ""; // название атрибута
 
                     string value = row["_VALUE"]?.ToString() ?? ""; // значение
 
-                    valueMap[name] = value;
+                    string unit = row["_UNIT"]?.ToString() ?? ""; // единица измерения
+
+                    valueMap[name] = value+" "+unit;
                 } // сначала закидываем названия и значения всех заполненных атрибутов в словарь
+                
+                // атрибуты связи
+                if (idLink != 0) // если объект имеет связь с родителем
+                {
+                    if (dtLinkAttrs != null && dtLinkAttrs.Rows.Count > 0) // если атрибуты связи есть
+                    {
+                        foreach (DataRow row in dtLinkAttrs.Rows) // перебираем атрибуты связи
+                        {
+                            string name =
+                                row["_NAME"]?.ToString() ?? ""; // имя атрибута связи
+
+                            string value =
+                                row["_VALUE"]?.ToString() ?? ""; // значение
+
+                            name = name + "(атрибут связи)"; // добавляем подпись
+
+                            valueMap[name] = value; // суем атрибуты связи в словарь атрибутов
+                        }
+                    }
+                }
 
                 var attributes = new List<AttributeItem>(); // общий список атрибутов для выбранного объекта
 
@@ -471,7 +500,8 @@ namespace LoodsmanBrowser2000
                     // атрибут с таким названием,
                     // берем его,
                     // если нет его,
-                    // то оставляем значение пустым
+                    // берем название из списка атрибутов типа
+                    // значение оставляем пустым
 
                     attributes.Add(
                         new AttributeItem
@@ -486,7 +516,9 @@ namespace LoodsmanBrowser2000
                     .OrderByDescending(a => a.IsObligatory)
                     .ThenBy(a => a.Name)
                     .ToList(); // сортируем атрибуты по обязательности и названию в алфавитном
+               
                 dgAttributes.ItemsSource = attributes; // выводим атрибуты в датагрид
+                
             }
             catch (Exception ex)
             {
@@ -580,16 +612,18 @@ namespace LoodsmanBrowser2000
 
                 int idVersion = data.IdVersion; //
                 string typeName = data.TypeName; //
+                int idLink = data.IdLink; //
+
                 if (IsDocument(idVersion) && hasFiles(idVersion))
                 {
                     ShowFilesArea();
-                    LoadAttributes(idVersion, typeName);
+                    LoadAttributes(idVersion, typeName, idLink);
                     LoadFiles(data);
                 }
                 else
                 {
                     HideFilesArea();
-                    LoadAttributes(idVersion, typeName);
+                    LoadAttributes(idVersion, typeName, idLink);
                 }
             }
             catch (Exception ex)
