@@ -21,6 +21,8 @@ namespace LoodsmanBrowser2000
 
         private readonly INetPluginCall _npc;
 
+        private GridLength _savedFilesRowHeight = new GridLength(1, GridUnitType.Star);
+
         // нажатые кнопки
         private readonly HashSet<Key> _pressedKeys = new HashSet<Key>();
 
@@ -46,7 +48,6 @@ namespace LoodsmanBrowser2000
         public class TreeItemData
         {
             public int IdVersion { get; set; }
-
             public string TypeName { get; set; }
         }
 
@@ -74,42 +75,6 @@ namespace LoodsmanBrowser2000
             PreviewKeyDown += Page_PreviewKeyDown;
             PreviewKeyUp += Page_PreviewKeyUp;
             Loaded += (_, __) => Keyboard.Focus(this);
-        }
-
-        // открытие файлов двойным нажатием
-        private void DgFiles_MouseDoubleClick(
-            object sender,
-            System.Windows.Input.MouseButtonEventArgs e
-        )
-        {
-            try
-            {
-                var file = dgFiles.SelectedItem as FileItem;
-
-                if (file == null)
-                    return;
-
-                string extractedFile = _npc.RunMethod(
-                        "ExtractFile",
-                        new object[] { "", "", "", file.IdVersion, file.Name, file.LocalPath, 0 }
-                    )
-                    ?.ToString();
-
-                if (string.IsNullOrWhiteSpace(extractedFile))
-                {
-                    MessageBox.Show("Не удалось извлечь файл");
-
-                    return;
-                }
-
-                Process.Start(
-                    new ProcessStartInfo { FileName = extractedFile, UseShellExecute = true }
-                );
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.ToString());
-            }
         }
 
         /*private void LoadRootObjects()
@@ -145,17 +110,17 @@ namespace LoodsmanBrowser2000
         // создание элементов дерева
         private TreeViewItem CreateTreeItem(DataRow row, int idVersion)
         {
-            string product = row["_PRODUCT"]?.ToString().Trim() ?? "";
-            string version = row["_VERSION"]?.ToString().Trim() ?? "";
-            string type = row["_TYPE"]?.ToString().Trim() ?? "";
-            string name = GetObjectName(idVersion);
-            string state = row["_STATE"]?.ToString().Trim() ?? "";
+            string product = row["_PRODUCT"]?.ToString().Trim() ?? ""; // обозначение
+            string version = row["_VERSION"]?.ToString().Trim() ?? ""; // версия
+            string type = row["_TYPE"]?.ToString().Trim() ?? ""; // тип
+            string name = GetObjectName(idVersion); // наименование
+            string state = row["_STATE"]?.ToString().Trim() ?? ""; // состояние
             int accessLevel =
-                row["_ACCESSLEVEL"] != DBNull.Value ? Convert.ToInt32(row["_ACCESSLEVEL"]) : 0;
+                row["_ACCESSLEVEL"] != DBNull.Value ? Convert.ToInt32(row["_ACCESSLEVEL"]) : 0; // уровень доступа
             string colorName = GetAccessColor(accessLevel);
 
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
-            // круг - индикатор прав доступа
+            // индикатор прав доступа
             if (0 < accessLevel && accessLevel <= 3)
             {
                 panel.Children.Add(
@@ -169,21 +134,6 @@ namespace LoodsmanBrowser2000
                     }
                 );
             }
-            /*var iconName = GetAccessIcon(accessLevel);
-            var assemblyPath = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            var path = System.IO.Path.Combine(
-                assemblyPath,
-                "Resources",
-                iconName);
-            var accessIcon = new Image
-            {
-                Source = new BitmapImage(new Uri(path)),
-                Width = 16,
-                Height = 16,
-                Margin = new Thickness(0, 0, 5, 0)
-            };
-            */
-            // сторонние иконки из папки
 
             // иконка типа
             if (_typeIcons.ContainsKey(type))
@@ -241,18 +191,18 @@ namespace LoodsmanBrowser2000
                 var dt = _npc.GetDataTable(
                     "GetInfoAboutVersion",
                     new object[] { "", "", "", idVersion, 2 }
-                );
+                ); // дергаем атрибуты объекта со значениями
 
-                if (dt == null)
-                    return "";
+                if (dt == null) // дататейбл пуст или не пришел
+                    return ""; // возвращаем пустую строку
 
-                foreach (DataRow row in dt.Rows)
+                foreach (DataRow row in dt.Rows) // перебираем все атрибуты 
                 {
-                    string attrName = row["_NAME"]?.ToString() ?? "";
+                    string attrName = row["_NAME"]?.ToString() ?? ""; // имя атрибута 
 
-                    if (attrName == "Наименование")
+                    if (attrName == "Наименование") // если атрибут - Наименование 
                     {
-                        return row["_VALUE"]?.ToString() ?? "";
+                        return row["_VALUE"]?.ToString() ?? ""; // возвращаем его значение 
                     }
                 }
             }
@@ -261,18 +211,18 @@ namespace LoodsmanBrowser2000
             return "";
         }
 
-        // проверка есть ли у документа вложенные файлы
+        // проверка наличия у документа вложенных файлов
         private bool hasFiles(int idVersion)
         {
             var dt = _npc.GetDataTable(
                 "GetInfoAboutVersion",
                 new object[] { "", "", "", idVersion, 7 }
-            );
+            ); // дергаем список файлов 
 
-            if (dt == null || dt.Rows.Count == 0)
-                return false;
-            else
-                return true;
+            if (dt == null || dt.Rows.Count == 0) // если дататейбл пуст
+                return false; // значит файлов у документа нету
+            else // иначе
+                return true; // файлы есть 
         }
 
         // проверка, документ ли объект
@@ -283,12 +233,12 @@ namespace LoodsmanBrowser2000
                 var dt = _npc.GetDataTable(
                     "GetInfoAboutVersion",
                     new object[] { "", "", "", idVersion, 15 }
-                );
+                ); // получаем информацию о объекте
 
                 if (dt == null || dt.Rows.Count == 0)
                     return false;
 
-                int isDocument = Convert.ToInt32(dt.Rows[0]["_DOCUMENT"]);
+                int isDocument = Convert.ToInt32(dt.Rows[0]["_DOCUMENT"]); // документ?
 
                 return isDocument == 1;
             }
@@ -307,7 +257,7 @@ namespace LoodsmanBrowser2000
 
             try
             {
-                var dt = _npc.GetDataTable("GetTree", new object[] { "", "", "", 0, "", false });
+                var dt = _npc.GetDataTable("GetTree", new object[] { "", "", "", 0 /**/, "", false });
 
                 foreach (DataRow row in dt.Rows)
                 {
@@ -544,7 +494,7 @@ namespace LoodsmanBrowser2000
             }
         }
 
-        // загружаем детей
+        // загружаем дочерние объекты
         private void LoadChildren(TreeViewItem parentItem)
         {
             try
@@ -590,38 +540,6 @@ namespace LoodsmanBrowser2000
             {
                 MessageBox.Show(ex.ToString());
             }
-        }
-
-        private GridLength _savedFilesRowHeight = new GridLength(1, GridUnitType.Star);
-
-        private void HideFilesArea()
-        {
-            _savedFilesRowHeight = rowFilesHost.Height;
-
-            borderFiles.Visibility = Visibility.Collapsed;
-            splitterFiles.Visibility = Visibility.Collapsed;
-
-            rowFilesHost.Height = new GridLength(0);
-            rowFilesHost.MinHeight = 0;
-
-            dgFiles.ItemsSource = null;
-        }
-
-        private void ShowFilesArea()
-        {
-            borderFiles.Visibility = Visibility.Visible;
-            splitterFiles.Visibility = Visibility.Visible;
-
-            rowFilesHost.MinHeight = 200;
-
-            if (rowFilesHost.Height.Value == 0)
-                rowFilesHost.Height =
-                    _savedFilesRowHeight.Value > 0
-                        ? _savedFilesRowHeight
-                        : new GridLength(1, GridUnitType.Star);
-
-            if (rowFilesHost.Height.Value == 0)
-                rowFilesHost.Height = new GridLength(1, GridUnitType.Star);
         }
 
         /*Обработчики*/
@@ -680,6 +598,42 @@ namespace LoodsmanBrowser2000
             }
         }
 
+        // обработчик двойного клика на файл//открытие файлов двойным нажатием
+        private void DgFiles_MouseDoubleClick(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e
+        )
+        {
+            try
+            {
+                var file = dgFiles.SelectedItem as FileItem;
+
+                if (file == null)
+                    return;
+
+                string extractedFile = _npc.RunMethod(
+                        "ExtractFile",
+                        new object[] { "", "", "", file.IdVersion, file.Name, file.LocalPath, 0 }
+                    )
+                    ?.ToString();
+
+                if (string.IsNullOrWhiteSpace(extractedFile))
+                {
+                    MessageBox.Show("Не удалось извлечь файл");
+
+                    return;
+                }
+
+                Process.Start(
+                    new ProcessStartInfo { FileName = extractedFile, UseShellExecute = true }
+                );
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+        }
+
         // обработчик события нажатия на клавишу
         private void Page_PreviewKeyDown(object sender, KeyEventArgs e)
         {
@@ -727,6 +681,38 @@ namespace LoodsmanBrowser2000
                 && _pressedKeys.Contains(Key.M)
                 && _pressedKeys.Contains(Key.I)
                 && _pressedKeys.Contains(Key.N);
+        }
+
+        // прячем область файлов
+        private void HideFilesArea()
+        {
+            _savedFilesRowHeight = rowFilesHost.Height;
+
+            borderFiles.Visibility = Visibility.Collapsed;
+            splitterFiles.Visibility = Visibility.Collapsed;
+
+            rowFilesHost.Height = new GridLength(0);
+            rowFilesHost.MinHeight = 0;
+
+            dgFiles.ItemsSource = null;
+        }
+
+        // показываем область файлов
+        private void ShowFilesArea()
+        {
+            borderFiles.Visibility = Visibility.Visible;
+            splitterFiles.Visibility = Visibility.Visible;
+
+            rowFilesHost.MinHeight = 200;
+
+            if (rowFilesHost.Height.Value == 0)
+                rowFilesHost.Height =
+                    _savedFilesRowHeight.Value > 0
+                        ? _savedFilesRowHeight
+                        : new GridLength(1, GridUnitType.Star);
+
+            if (rowFilesHost.Height.Value == 0)
+                rowFilesHost.Height = new GridLength(1, GridUnitType.Star);
         }
     }
 }
